@@ -1,0 +1,77 @@
+name: Build & Release OTA
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'   # ex: v6, v7, v8 ...
+
+jobs:
+  # ── Job 1 : build dans le container ESP-IDF ─────────────────────────────────
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:v5.3.2
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build firmware
+        shell: bash
+        run: |
+          . /opt/esp/idf/export.sh
+          idf.py set-target esp32c6
+          idf.py build
+
+      - name: Read OTA version from config.h
+        id: ver
+        shell: bash
+        run: |
+          VERSION=$(python3 -c "
+          import re, sys
+          m = re.search(r'OTA_UPGRADE_FILE_VERSION\s+(0x[0-9A-Fa-f]+)', open('main/config.h').read())
+          print(int(m.group(1), 0)) if m else sys.exit('OTA_UPGRADE_FILE_VERSION introuvable')
+          ")
+          echo "int=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Version OTA : ${VERSION}"
+
+      - name: Create OTA image
+        shell: bash
+        run: |
+          python3 generate_ota.py --version ${{ steps.ver.outputs.int }}
+
+      - name: Upload OTA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ota-image
+          path: zigbee_co2_sensor.ota
+
+  # ── Job 2 : créer la release GitHub ─────────────────────────────────────────
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download OTA artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ota-image
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Firmware ${{ github.ref_name }}"
+          body: |
+            ## Capteur CO2 SCD40 — ${{ github.ref_name }}
+
+            ### Mise à jour OTA via Zigbee2MQTT
+            1. Allez dans Zigbee2MQTT → votre capteur → onglet OTA
+            2. Cliquez **Check for updates** puis **Update**
+
+            ### Installation manuelle
+            Copiez `zigbee_co2_sensor.ota` dans le dossier `ota/` de Zigbee2MQTT.
+          files: zigbee_co2_sensor.ota
