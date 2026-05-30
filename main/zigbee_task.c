@@ -239,7 +239,7 @@ void esp_zb_task(void *pvParameters)
     };
     esp_zb_attribute_list_t *esp_zb_ota_client_cluster = esp_zb_ota_cluster_create(&ota_cluster_cfg);
     esp_zb_zcl_ota_upgrade_client_variable_t ota_client_var = {
-        .timer_query = ESP_ZB_ZCL_OTA_UPGRADE_QUERY_TIMER_COUNT_DEF,
+        .timer_query = 30,  // vérification OTA toutes les 30 minutes
         .hw_version = OTA_UPGRADE_HW_VERSION,
         .max_data_size = OTA_UPGRADE_MAX_DATA_SIZE,
     };

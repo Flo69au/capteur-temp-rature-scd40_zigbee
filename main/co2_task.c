@@ -3,6 +3,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_timer.h"
+#include "driver/gpio.h"
 #include "zigbee.h"
 #include "scd4x_i2c.h"
 #include "sensirion_i2c_hal.h"
@@ -12,6 +13,46 @@
 
 
 static const char *TAG = "scd40_task";
+
+// Envoie jusqu'à 9 pulses SCL pour libérer un SDA bloqué bas (I2C spec §3.1.16)
+static void i2c_recover(void)
+{
+    gpio_set_direction(SDC4X_SCL_PIN, GPIO_MODE_OUTPUT_OD);
+    gpio_set_direction(SDC4X_SDA_PIN, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(SDC4X_SCL_PIN, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(SDC4X_SDA_PIN, GPIO_PULLUP_ONLY);
+    gpio_set_level(SDC4X_SCL_PIN, 1);
+    vTaskDelay(pdMS_TO_TICKS(1));
+
+    if (gpio_get_level(SDC4X_SDA_PIN) == 1) {
+        return; // bus libre, rien à faire
+    }
+
+    ESP_LOGW(TAG, "I2C: SDA bloqué bas, récupération en cours...");
+    for (int i = 0; i < 9; i++) {
+        gpio_set_level(SDC4X_SCL_PIN, 0);
+        vTaskDelay(pdMS_TO_TICKS(1));
+        gpio_set_level(SDC4X_SCL_PIN, 1);
+        vTaskDelay(pdMS_TO_TICKS(1));
+        if (gpio_get_level(SDC4X_SDA_PIN) == 1) {
+            ESP_LOGI(TAG, "I2C: SDA libéré après %d pulses", i + 1);
+            break;
+        }
+    }
+
+    // Condition STOP pour terminer proprement la transaction
+    gpio_set_direction(SDC4X_SDA_PIN, GPIO_MODE_OUTPUT_OD);
+    gpio_set_level(SDC4X_SDA_PIN, 0);
+    vTaskDelay(pdMS_TO_TICKS(1));
+    gpio_set_level(SDC4X_SCL_PIN, 1);
+    vTaskDelay(pdMS_TO_TICKS(1));
+    gpio_set_level(SDC4X_SDA_PIN, 1);
+    vTaskDelay(pdMS_TO_TICKS(1));
+
+    if (gpio_get_level(SDC4X_SDA_PIN) == 0) {
+        ESP_LOGE(TAG, "I2C: récupération échouée, SDA toujours bas — vérifiez le câblage");
+    }
+}
 
 RTC_DATA_ATTR bool scd4x_initialized = false;
 
@@ -28,6 +69,7 @@ RTC_DATA_ATTR int64_t last_co2_report_time = 0;
 void sdc41_task(void *pvParameters)
 {
     int16_t error = 0;
+    i2c_recover();
     sensirion_i2c_hal_init(SDC4X_SDA_PIN, SDC4X_SCL_PIN);
     if (!scd4x_initialized) {
         // Clean up potential SCD40 states (scd4x_wake_up is SCD41/43 only — not called here)
@@ -131,6 +173,7 @@ void sdc41_task(void *pvParameters)
     float_t sanity_humidity;
     bool plausible;
     bool data_ready_flag;
+    int consecutive_errors = 0;
 
     while (1)
     {
@@ -144,8 +187,21 @@ void sdc41_task(void *pvParameters)
         error = scd4x_get_data_ready_flag(&data_ready_flag);
         if (error) {
             ESP_LOGE(TAG, "Error executing scd4x_get_data_ready_flag(): %i", error);
+            if (++consecutive_errors >= 3) {
+                ESP_LOGW(TAG, "3 erreurs I2C consécutives, tentative de récupération...");
+                i2c_recover();                          // libère SDA si bloqué bas (GPIO)
+                sensirion_i2c_hal_free();               // détruit le bus proprement
+                vTaskDelay(pdMS_TO_TICKS(10));
+                sensirion_i2c_hal_init(SDC4X_SDA_PIN, SDC4X_SCL_PIN);  // réinitialise
+                scd4x_stop_periodic_measurement();
+                vTaskDelay(pdMS_TO_TICKS(SCD4X_STOP_MEAS_WAIT_MS));
+                scd4x_start_periodic_measurement();
+                consecutive_errors = 0;
+                scd4x_initialized = false;
+            }
             continue;
         }
+        consecutive_errors = 0;
         if (!data_ready_flag) {
             ESP_LOGW(TAG, "Data not ready yet, skipping this cycle");
             continue;
