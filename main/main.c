@@ -27,15 +27,14 @@ static TaskHandle_t led_blink_task_handle = NULL;
 static void led_init(void)
 {
     gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << PAIRING_LED_GPIO) | (1ULL << CONNECTED_LED_GPIO),
+        .pin_bit_mask = (1ULL << PAIRING_LED_GPIO),
         .mode         = GPIO_MODE_OUTPUT,
         .pull_up_en   = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type    = GPIO_INTR_DISABLE,
     };
     gpio_config(&io_conf);
-    gpio_set_level(PAIRING_LED_GPIO,   !PAIRING_LED_ACTIVE);
-    gpio_set_level(CONNECTED_LED_GPIO, !CONNECTED_LED_ACTIVE);
+    gpio_set_level(PAIRING_LED_GPIO, !PAIRING_LED_ACTIVE);
 }
 
 static void led_set(bool on)
@@ -45,7 +44,7 @@ static void led_set(bool on)
 
 static void connected_led_set(bool on)
 {
-    gpio_set_level(CONNECTED_LED_GPIO, on ? CONNECTED_LED_ACTIVE : !CONNECTED_LED_ACTIVE);
+    gpio_set_level(PAIRING_LED_GPIO, on ? PAIRING_LED_ACTIVE : !PAIRING_LED_ACTIVE);
 }
 
 static void led_blink_task(void *period_ms_ptr)

@@ -92,10 +92,6 @@
 // time in ms before the zigbee stack sends a CAN_SLEEP signal
 #define ZIGBEE_SLEEP_THRESHOLD 20
 
-// LED rouge — clignote pendant l'appairage Zigbee
-#define PAIRING_LED_GPIO       GPIO_NUM_15  // à ajuster selon votre board
+// LED GPIO15 — clignote pendant l'appairage, fixe quand connecté
+#define PAIRING_LED_GPIO       GPIO_NUM_15
 #define PAIRING_LED_ACTIVE     0            // 0 = active LOW (LED allumée quand GPIO=0)
-
-// LED verte (ou autre) — allumée en permanence quand connecté au réseau Zigbee
-#define CONNECTED_LED_GPIO     GPIO_NUM_7   // à ajuster selon votre board
-#define CONNECTED_LED_ACTIVE   0            // 0 = active LOW
