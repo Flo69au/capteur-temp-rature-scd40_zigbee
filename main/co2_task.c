@@ -25,7 +25,10 @@ static void i2c_recover(void)
     vTaskDelay(pdMS_TO_TICKS(1));
 
     if (gpio_get_level(SDC4X_SDA_PIN) == 1) {
-        return; // bus libre, rien à faire
+        // Bus libre — réinitialise les pins avant que le driver I2C les prenne
+        gpio_reset_pin(SDC4X_SCL_PIN);
+        gpio_reset_pin(SDC4X_SDA_PIN);
+        return;
     }
 
     ESP_LOGW(TAG, "I2C: SDA bloqué bas, récupération en cours...");
@@ -52,6 +55,10 @@ static void i2c_recover(void)
     if (gpio_get_level(SDC4X_SDA_PIN) == 0) {
         ESP_LOGE(TAG, "I2C: récupération échouée, SDA toujours bas — vérifiez le câblage");
     }
+
+    // Réinitialise les pins pour le driver I2C
+    gpio_reset_pin(SDC4X_SCL_PIN);
+    gpio_reset_pin(SDC4X_SDA_PIN);
 }
 
 RTC_DATA_ATTR bool scd4x_initialized = false;
@@ -70,7 +77,12 @@ void sdc41_task(void *pvParameters)
 {
     int16_t error = 0;
     i2c_recover();
-    sensirion_i2c_hal_init(SDC4X_SDA_PIN, SDC4X_SCL_PIN);
+    int16_t hal_err = sensirion_i2c_hal_init(SDC4X_SDA_PIN, SDC4X_SCL_PIN);
+    if (hal_err != 0) {
+        ESP_LOGE(TAG, "I2C init échoué (err=%d) — SDA=GPIO%d SCL=GPIO%d", hal_err, SDC4X_SDA_PIN, SDC4X_SCL_PIN);
+    } else {
+        ESP_LOGI(TAG, "I2C initialisé — SDA=GPIO%d SCL=GPIO%d", SDC4X_SDA_PIN, SDC4X_SCL_PIN);
+    }
     if (!scd4x_initialized) {
         // Clean up potential SCD40 states (scd4x_wake_up is SCD41/43 only — not called here)
         ESP_LOGI(TAG, "First boot after power cycle. Resetting SCD40 sensor state, some i2c errors are expected");
@@ -173,6 +185,7 @@ void sdc41_task(void *pvParameters)
     float_t sanity_humidity;
     bool plausible;
     bool data_ready_flag;
+    bool sent_something;
     int consecutive_errors = 0;
 
     while (1)
@@ -216,6 +229,7 @@ void sdc41_task(void *pvParameters)
         }
 
         plausible = true;
+        sent_something = false;
         zb_temperature = temperature / 10;
         zb_humidity = humidity / 10;
         zb_co2 = (float_t)co2 / 1000000.0f;
@@ -238,6 +252,7 @@ void sdc41_task(void *pvParameters)
                                 ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_VALUE_ID, &zb_temperature, 2);
                 last_reported_temp = zb_temperature;
                 last_temp_report_time = current_time;
+                sent_something = true;
             }
         } else {
             ESP_LOGW(TAG, "Temperature value is implausible and no Zigbee update will be sent");
@@ -262,6 +277,7 @@ void sdc41_task(void *pvParameters)
                                 ESP_ZB_ZCL_ATTR_REL_HUMIDITY_MEASUREMENT_VALUE_ID, &zb_humidity_corrected, 2);
                 last_reported_humid = zb_humidity_corrected;
                 last_humid_report_time = current_time;
+                sent_something = true;
             }
         } else {
             ESP_LOGW(TAG, "Humidity value is implausible and no Zigbee update will be sent");
@@ -281,6 +297,7 @@ void sdc41_task(void *pvParameters)
                                 ESP_ZB_ZCL_ATTR_CARBON_DIOXIDE_MEASUREMENT_MEASURED_VALUE_ID, &zb_co2, 4);
                 last_reported_co2 = co2;
                 last_co2_report_time = current_time;
+                sent_something = true;
             }
         } else {
             ESP_LOGW(TAG, "CO2 value is implausible and no Zigbee update will be sent");
@@ -289,6 +306,9 @@ void sdc41_task(void *pvParameters)
 
         if (plausible) {
             xTaskNotify(xZigbeeTask, CO2_MEASUREMENT_DONE, eSetValueWithOverwrite);
+        }
+        if (sent_something) {
+            led_tx_pulse();
         }
     }
 }

@@ -73,6 +73,14 @@ void pairing_led_stop(void)
     led_set(false);
 }
 
+void led_tx_pulse(void)
+{
+    if (led_blink_task_handle != NULL) return;
+    led_set(false);
+    vTaskDelay(pdMS_TO_TICKS(150));
+    led_set(true);
+}
+
 // ---------------------- Factory reset ----------------------
 
 static void check_factory_reset(void)
@@ -184,6 +192,7 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
                 esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
             } else {
                 ESP_LOGI(TAG, "Device rebooted");
+                connected_led_set(true);
                 confirm_ota_rollback();
                 start_sensor_measurements();
             }

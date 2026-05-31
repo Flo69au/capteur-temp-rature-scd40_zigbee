@@ -64,8 +64,10 @@
 #define TEMP_MAX 60
 
 // Sensor calibration settings
-#define SENSOR_ALTITUDE_METERS 530  // Saint-Just-la-Pendue, Loire (428-637m) — valid range: 0–3000 m (datasheet §6.6)
-#define SENSOR_TEMP_OFFSET_MILLI_C 4072  // Temperature offset in milli-°C (calibrated 2026-03-30: avg diff ref - capteur = -2.51°C sur 153 pts → +2512 milli-°C ajoutés)
+#ifndef SENSOR_ALTITUDE_METERS
+#define SENSOR_ALTITUDE_METERS 530  // fallback si non injecté par CMake — valid range: 0–3000 m (datasheet §6.6)
+#endif
+#define SENSOR_TEMP_OFFSET_MILLI_C 4272  // Temperature offset in milli-°C (calibrated 2026-03-30: avg diff ref - capteur = -2.51°C sur 153 pts → +2512 milli-°C ajoutés)
                                           // Factory default: 4000 milli-°C (4 °C). Range recommandée: 0–20 °C (datasheet §6.4)
 // Si le SCD40 lit trop chaud → augmentez la valeur
 // Si le SCD40 lit trop froid → diminuez la valeur

@@ -7,3 +7,7 @@ idf_component_register(
     INCLUDE_DIRS "."
     REQUIRES "esp-idf-scd4x" "nvs_flash" "espressif__esp-zigbee-lib" "esp_timer" "app_update"
 )
+
+target_compile_definitions(${COMPONENT_LIB} PRIVATE
+    SENSOR_ALTITUDE_METERS=${SENSOR_ALTITUDE_METERS}
+)
