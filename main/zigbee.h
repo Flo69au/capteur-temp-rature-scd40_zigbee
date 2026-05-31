@@ -7,7 +7,7 @@
 /* Zigbee configuration */
 #define INSTALLCODE_POLICY_ENABLE false /* enable the install code policy for security */
 #define ED_AGING_TIMEOUT ESP_ZB_ED_AGING_TIMEOUT_64MIN
-#define ED_KEEP_ALIVE 180000                                               /* 3m */
+#define ED_KEEP_ALIVE 30000                                                /* 30s — sur secteur, permet à Z2M d'envoyer l'OTA rapidement */
 #define HA_ESP_CO2_ENDPOINT 10                                         /* device endpoint, used to process controlling commands */
 #define ESP_ZB_PRIMARY_CHANNEL_MASK ESP_ZB_TRANSCEIVER_ALL_CHANNELS_MASK /* Zigbee primary channel mask use in the example */
 
