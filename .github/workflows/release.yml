@@ -3,7 +3,7 @@ name: Build & Release OTA
 on:
   push:
     tags:
-      - 'v[0-9]*'   # ex: v6, v7, v8 ...
+      - 'v[0-9]*'   # ex: v5.1, v5.2, v6.0 ...
 
 jobs:
   # ── Job 1 : build dans le container ESP-IDF ─────────────────────────────────
