@@ -8,4 +8,7 @@ module.exports = {
     image: 'https://raw.githubusercontent.com/Flo69au/capteur-temp-rature-scd40_zigbee/main/images/capteur-temp.png',
     extend: [m.temperature(), m.humidity(), m.co2()],
     ota: true,
+    configure: async (device, coordinatorEndpoint, logger) => {
+        // Le firmware pousse les données lui-même — pas de configReport nécessaire
+    },
 };
