@@ -84,9 +84,9 @@
 // OTA firmware update settings
 #define OTA_UPGRADE_MANUFACTURER    0x131B       // Espressif manufacturer code
 #define OTA_UPGRADE_IMAGE_TYPE      0x1011       // Unique image type for this product
-#define OTA_UPGRADE_FILE_VERSION    0x00010100   // v5.2 — format: 0xMMmmPP00 (major.minor.patch)
+#define OTA_UPGRADE_FILE_VERSION    0x00010100   // v1.1 — format: 0xMMmmPP00 (major.minor.patch)
 #define OTA_UPGRADE_HW_VERSION      0x0002
-#define OTA_UPGRADE_MAX_DATA_SIZE   64
+#define OTA_UPGRADE_MAX_DATA_SIZE   30
 
 // Misc settings, for very fine tuning
 // time in ms before the zigbee stack sends a CAN_SLEEP signal
