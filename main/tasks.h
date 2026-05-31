@@ -14,3 +14,5 @@ extern volatile bool ota_in_progress;
 
 void sdc41_task(void *pvParameters);
 void esp_zb_task(void *pvParameters);
+void pairing_led_start(void);
+void pairing_led_stop(void);
