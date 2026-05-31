@@ -1,4 +1,5 @@
 const exposes = require('zigbee-herdsman-converters/lib/exposes');
+const reporting = require('zigbee-herdsman-converters/lib/reporting');
 const e = exposes.presets;
 
 const fromZigbeeTemperature = {
@@ -33,15 +34,23 @@ const fromZigbeeCO2 = {
 
 const definition = {
     zigbeeModel: ['CO2 Sensor'],
-    model: 'SCD40-Zigbee',
+    model: 'SCD40-ZB-01',
     vendor: 'FlorianL',
-    description: 'Capteur CO2 / température / humidité SCD40 Zigbee',
+    description: 'Capteur de CO₂, température et humidité — SCD40 Zigbee',
     image: 'https://raw.githubusercontent.com/Flo69au/capteur-temp-rature-scd40_zigbee/main/images/capteur-temp.png',
     fromZigbee: [fromZigbeeTemperature, fromZigbeeHumidity, fromZigbeeCO2],
     toZigbee: [],
     ota: true,
-    configure: async (device, coordinatorEndpoint) => {},
-    exposes: [e.temperature(), e.humidity(), e.co2()],
+    meta: {configureKey: 1},
+    configure: async (device, coordinatorEndpoint, logger) => {
+        device.meta.configured = 1;
+    },
+    exposes: [
+        e.temperature().withDescription('Température ambiante').withUnit('°C'),
+        e.humidity().withDescription('Humidité relative').withUnit('%'),
+        e.co2().withDescription('Concentration en CO₂').withUnit('ppm'),
+        e.linkquality(),
+    ],
 };
 
 module.exports = definition;
