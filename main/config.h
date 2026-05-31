@@ -84,7 +84,7 @@
 // OTA firmware update settings
 #define OTA_UPGRADE_MANUFACTURER    0x131B       // Espressif manufacturer code
 #define OTA_UPGRADE_IMAGE_TYPE      0x1011       // Unique image type for this product
-#define OTA_UPGRADE_FILE_VERSION    0x00000005   // Increment with each OTA release
+#define OTA_UPGRADE_FILE_VERSION    0x00000006   // Increment with each OTA release
 #define OTA_UPGRADE_HW_VERSION      0x0002
 #define OTA_UPGRADE_MAX_DATA_SIZE   64
 
