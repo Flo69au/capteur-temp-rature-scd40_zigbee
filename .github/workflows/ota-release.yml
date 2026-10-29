@@ -1,5 +1,6 @@
 # Publie automatiquement une mise à jour OTA Zigbee du capteur CO2
-# à chaque tag "v<nombre>" poussé sur GitHub (ex: v2, v3, v4...).
+# à chaque tag "v<nombre>" poussé sur GitHub (ex: v2, v3, v4...), ou créé depuis
+# l'interface web : Releases -> Draft a new release -> tag "v3" -> Publish.
 #
 # Ce que fait ce workflow :
 #   1. compile sketch_sep16a avec OTA_FW_VERSION = numéro du tag
@@ -84,9 +85,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "${{ steps.img.outputs.file }}" \
-            --title "Firmware $GITHUB_REF_NAME" \
-            --notes "Image OTA Zigbee version ${{ steps.ver.outputs.num }} (${{ steps.ver.outputs.hex }})."
+          # La release peut déjà exister si le tag a été créé depuis l'interface
+          # GitHub (Releases -> Draft a new release) : on y ajoute alors l'image.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${{ steps.img.outputs.file }}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${{ steps.img.outputs.file }}" \
+              --title "Firmware $GITHUB_REF_NAME" \
+              --notes "Image OTA Zigbee version ${{ steps.ver.outputs.num }} (${{ steps.ver.outputs.hex }})."
+          fi
 
       - name: Mettre à jour ota_index.json
         env:
