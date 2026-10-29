@@ -1,0 +1,123 @@
+# Publie automatiquement une mise à jour OTA Zigbee du capteur CO2
+# à chaque tag "v<nombre>" poussé sur GitHub (ex: v2, v3, v4...).
+#
+# Ce que fait ce workflow :
+#   1. compile sketch_sep16a avec OTA_FW_VERSION = numéro du tag
+#   2. emballe le .bin en image OTA Zigbee (.zigbee) avec l'outil Espressif
+#   3. publie le .zigbee dans une Release GitHub
+#   4. met à jour ota_index.json sur la branche principale
+#
+# Zigbee2MQTT lit ota_index.json via (configuration.yaml) :
+#   ota:
+#     zigbee_ota_override_index_location: https://raw.githubusercontent.com/Flo69au/capteur-temp-rature-scd40_zigbee/main/ota_index.json
+#
+# Le repo doit être PUBLIC (Zigbee2MQTT ne sait pas s'authentifier sur GitHub).
+
+name: Release OTA Zigbee
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  SKETCH_DIR: sketch_sep16a
+  FQBN: esp32:esp32:XIAO_ESP32C6:PartitionScheme=zigbee,ZigbeeMode=ed
+  ESP32_CORE_VERSION: "3.3.12"
+  ESP32_INDEX_URL: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+  # Doivent correspondre au sketch (OTA_MANUFACTURER_ID / OTA_IMAGE_TYPE / ZB_MODEL)
+  OTA_MANUFACTURER_ID: "0x1337"
+  OTA_IMAGE_TYPE: "0x0001"
+  ZB_MODEL: XIAO-SCD40-CO2
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Version depuis le tag
+        id: ver
+        run: |
+          NUM="${GITHUB_REF_NAME#v}"
+          if ! [[ "$NUM" =~ ^[0-9]+$ ]]; then
+            echo "::error::Le tag doit être de la forme v<entier> (ex: v2), reçu: $GITHUB_REF_NAME"
+            exit 1
+          fi
+          echo "num=$NUM" >> "$GITHUB_OUTPUT"
+          echo "hex=$(printf '0x%08X' "$NUM")" >> "$GITHUB_OUTPUT"
+
+      - uses: arduino/setup-arduino-cli@v2.0.0
+
+      - name: Installer le core ESP32 et la librairie SCD4x
+        run: |
+          arduino-cli core update-index --additional-urls "$ESP32_INDEX_URL"
+          arduino-cli core install "esp32:esp32@${ESP32_CORE_VERSION}" --additional-urls "$ESP32_INDEX_URL"
+          arduino-cli lib install "Sensirion I2C SCD4x"
+
+      - name: Compiler le firmware
+        run: |
+          arduino-cli compile --fqbn "$FQBN" \
+            --build-property "build.defines=-DOTA_FW_VERSION=${{ steps.ver.outputs.hex }}" \
+            --output-dir build "$SKETCH_DIR"
+          ls -la build
+
+      - name: Construire l'image OTA Zigbee
+        id: img
+        run: |
+          curl -sSfL -o image_builder_tool.py \
+            https://raw.githubusercontent.com/espressif/esp-zigbee-sdk/main/tools/image_builder_tool/image_builder_tool.py
+          python3 image_builder_tool.py \
+            --manuf-id "$OTA_MANUFACTURER_ID" --image-type "$OTA_IMAGE_TYPE" \
+            --file-version "${{ steps.ver.outputs.hex }}" \
+            --tag 0x0000 "build/${SKETCH_DIR}.ino.bin"
+          FILE=$(ls *-ota-file.zigbee)
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+          ls -la "$FILE"
+
+      - name: Publier la Release GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "${{ steps.img.outputs.file }}" \
+            --title "Firmware $GITHUB_REF_NAME" \
+            --notes "Image OTA Zigbee version ${{ steps.ver.outputs.num }} (${{ steps.ver.outputs.hex }})."
+
+      - name: Mettre à jour ota_index.json
+        env:
+          FILE: ${{ steps.img.outputs.file }}
+          VERSION: ${{ steps.ver.outputs.num }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git checkout -B "$DEFAULT_BRANCH" "origin/$DEFAULT_BRANCH"
+          python3 - <<'EOF'
+          import hashlib, json, os
+          f = os.environ["FILE"]
+          data = open(f, "rb").read()
+          entry = {
+              "fileName": f,
+              "fileVersion": int(os.environ["VERSION"]),
+              "fileSize": len(data),
+              "url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/{os.environ['GITHUB_REF_NAME']}/{f}",
+              "imageType": int(os.environ["OTA_IMAGE_TYPE"], 0),
+              "manufacturerCode": int(os.environ["OTA_MANUFACTURER_ID"], 0),
+              "modelId": os.environ["ZB_MODEL"],
+              "sha512": hashlib.sha512(data).hexdigest(),
+          }
+          # Une seule entrée : toujours la dernière version publiée.
+          # (pas de "force": true, sinon Z2M proposerait la MAJ en boucle)
+          with open("ota_index.json", "w") as out:
+              json.dump([entry], out, indent=2)
+              out.write("\n")
+          print(json.dumps(entry, indent=2))
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ota_index.json
+          git commit -m "OTA: index -> $GITHUB_REF_NAME"
+          git push origin "$DEFAULT_BRANCH"
