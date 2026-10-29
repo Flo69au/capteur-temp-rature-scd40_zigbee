@@ -105,8 +105,9 @@
 // l'envoi Zigbee, une fois la température correcte. Le SCD40 n'a pas de
 // calibrage RH interne, c'est donc une simple correction logicielle.
 // Formule : HUM_OFFSET_PCT = RH_reference - RH_capteur (+ ancien offset)
-// Calibré le 2026-10-29 : capteur 56.6% vs référence 47.2% -> 47.2 - 56.6 = -9.4
-#define HUM_OFFSET_PCT -9.4
+// 1er réglage : capteur 56.6% vs référence 47.2% -> -9.4
+// Réajusté le 2026-10-29 : affiché 45.4% vs référence 47.2% -> 47.2 - 45.4 + (-9.4) = -7.6
+#define HUM_OFFSET_PCT -7.6
 
 uint8_t button = BOOT_PIN;
 volatile bool otaRunning = false;
