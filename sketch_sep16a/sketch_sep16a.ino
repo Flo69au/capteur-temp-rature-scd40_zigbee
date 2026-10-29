@@ -101,6 +101,13 @@
 // offset de 2.5°C -> 24.1 - 20.4 + 2.5 = 6.2°C.
 #define TEMP_OFFSET_C 6.2
 
+// Correction d'humidité (en points de %RH), appliquée par le firmware avant
+// l'envoi Zigbee, une fois la température correcte. Le SCD40 n'a pas de
+// calibrage RH interne, c'est donc une simple correction logicielle.
+// Formule : HUM_OFFSET_PCT = RH_reference - RH_capteur (+ ancien offset)
+// Calibré le 2026-10-29 : capteur 56.6% vs référence 47.2% -> 47.2 - 56.6 = -9.4
+#define HUM_OFFSET_PCT -9.4
+
 uint8_t button = BOOT_PIN;
 volatile bool otaRunning = false;
 
@@ -280,7 +287,9 @@ void loop() {
       float humidity = 0.0f;
       error = scd40.readMeasurement(co2, temperature, humidity);
       if (!error) {
-        Serial.printf("CO2: %u ppm | T: %.1f°C | RH: %.1f%%\r\n", co2, temperature, humidity);
+        float rawHumidity = humidity;
+        humidity = constrain(humidity + HUM_OFFSET_PCT, 0.0f, 100.0f);
+        Serial.printf("CO2: %u ppm | T: %.1f°C | RH: %.1f%% (brut %.1f%%)\r\n", co2, temperature, humidity, rawHumidity);
         zbTempHum.setTemperature(temperature);
         zbTempHum.setHumidity(humidity);
         zbCO2.setCarbonDioxide((float)co2);
