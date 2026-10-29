@@ -1,12 +1,12 @@
 [
   {
-    "fileName": "1337-0001-00000005-ota-file.zigbee",
-    "fileVersion": 5,
-    "fileSize": 628558,
-    "url": "https://github.com/Flo69au/capteur-temp-rature-scd40_zigbee/releases/download/v5/1337-0001-00000005-ota-file.zigbee",
+    "fileName": "1337-0001-00000006-ota-file.zigbee",
+    "fileVersion": 6,
+    "fileSize": 630254,
+    "url": "https://github.com/Flo69au/capteur-temp-rature-scd40_zigbee/releases/download/v6/1337-0001-00000006-ota-file.zigbee",
     "imageType": 1,
     "manufacturerCode": 4919,
     "modelId": "XIAO-SCD40-CO2",
-    "sha512": "86e5ee1b68524273e0b51891762d195a6fe5e7332afd49eea70592743603610902f2ea424fea1acaa6fe96c859c25f65b2c841c58ce0b7595bd1b1197fefea61"
+    "sha512": "0389601cef8c5badf459ea614734fa698347f6780dd85f935d6073cb4d9c7bbab9f88f16fecc1ab7782ad5d9f444f84294bffa06547e3079ab283a5ce8b6f1f7"
   }
 ]
