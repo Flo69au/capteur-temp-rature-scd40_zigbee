@@ -109,6 +109,11 @@
 // Réajusté le 2026-10-29 : affiché 45.4% vs référence 47.2% -> 47.2 - 45.4 + (-9.4) = -7.6
 #define HUM_OFFSET_PCT -7.6
 
+// Envoi forcé des 3 mesures vers Zigbee2MQTT, quoi qu'il arrive (même si la
+// valeur n'a pas changé). Le reporting automatique de la pile Zigbee ne
+// garantit pas un envoi régulier, donc le firmware l'impose lui-même.
+#define REPORT_INTERVAL_MS 30000UL
+
 uint8_t button = BOOT_PIN;
 volatile bool otaRunning = false;
 
@@ -239,6 +244,7 @@ void setup() {
 
 void loop() {
   static unsigned long lastRead = 0;
+  static unsigned long lastReport = 0;
 
   // Pendant une mise à jour OTA : LED clignote vite, boutons de reset désactivés
   // (couper l'alimentation ou remettre à zéro le réseau en plein flash OTA = brique)
@@ -299,5 +305,13 @@ void loop() {
         Serial.printf("Erreur lecture SCD40: %s\r\n", errorMessage);
       }
     }
+  }
+
+  // Envoi forcé toutes les 30 s des dernières valeurs mesurées
+  if (Zigbee.connected() && millis() - lastReport >= REPORT_INTERVAL_MS) {
+    lastReport = millis();
+    bool ok = zbTempHum.report();   // température + humidité
+    ok = zbCO2.report() && ok;      // CO2
+    Serial.println(ok ? "Rapport Zigbee envoyé" : "Échec d'envoi du rapport Zigbee");
   }
 }
