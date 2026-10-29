@@ -8,6 +8,12 @@
 #   3. publie le .zigbee dans une Release GitHub
 #   4. met à jour ota_index.json sur la branche principale
 #
+# ota_index.json est un index COMMUN : il contient l'entrée du capteur CO2
+# + les entrées recopiées depuis les index listés dans EXTRA_INDEX_URLS
+# (ex: purificateur Levoit). Il est aussi rafraîchi chaque jour et via le
+# bouton "Run workflow" (onglet Actions), pour suivre les releases des
+# autres appareils sans toucher au capteur CO2.
+#
 # Zigbee2MQTT lit ota_index.json via (configuration.yaml) :
 #   ota:
 #     zigbee_ota_override_index_location: https://raw.githubusercontent.com/Flo69au/capteur-temp-rature-scd40_zigbee/main/ota_index.json
@@ -20,6 +26,9 @@ on:
   push:
     tags:
       - 'v*'
+  schedule:
+    - cron: '17 4 * * *'   # tous les jours vers 4h17 UTC : resynchronise l'index commun
+  workflow_dispatch:        # bouton "Run workflow" dans l'onglet Actions
 
 permissions:
   contents: write
@@ -33,6 +42,9 @@ env:
   OTA_MANUFACTURER_ID: "0x1337"
   OTA_IMAGE_TYPE: "0x0001"
   ZB_MODEL: XIAO-SCD40-CO2
+  # Index OTA d'autres appareils à intégrer dans l'index commun (séparés par des espaces)
+  EXTRA_INDEX_URLS: >-
+    https://raw.githubusercontent.com/Flo69au/levoit-classic-300s-zigbee/main/ota_index.json
 
 jobs:
   release:
@@ -44,6 +56,7 @@ jobs:
 
       - name: Version depuis le tag
         id: ver
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           NUM="${GITHUB_REF_NAME#v}"
           if ! [[ "$NUM" =~ ^[0-9]+$ ]]; then
@@ -54,14 +67,17 @@ jobs:
           echo "hex=$(printf '0x%08X' "$NUM")" >> "$GITHUB_OUTPUT"
 
       - uses: arduino/setup-arduino-cli@v2.0.0
+        if: startsWith(github.ref, 'refs/tags/v')
 
       - name: Installer le core ESP32 et la librairie SCD4x
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           arduino-cli core update-index --additional-urls "$ESP32_INDEX_URL"
           arduino-cli core install "esp32:esp32@${ESP32_CORE_VERSION}" --additional-urls "$ESP32_INDEX_URL"
           arduino-cli lib install "Sensirion I2C SCD4x"
 
       - name: Compiler le firmware
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           arduino-cli compile --fqbn "$FQBN" \
             --build-property "build.defines=-DOTA_FW_VERSION=${{ steps.ver.outputs.hex }}" \
@@ -70,6 +86,7 @@ jobs:
 
       - name: Construire l'image OTA Zigbee
         id: img
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           curl -sSfL -o image_builder_tool.py \
             https://raw.githubusercontent.com/espressif/esp-zigbee-sdk/main/tools/image_builder_tool/image_builder_tool.py
@@ -82,6 +99,7 @@ jobs:
           ls -la "$FILE"
 
       - name: Publier la Release GitHub
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -95,7 +113,7 @@ jobs:
               --notes "Image OTA Zigbee version ${{ steps.ver.outputs.num }} (${{ steps.ver.outputs.hex }})."
           fi
 
-      - name: Mettre à jour ota_index.json
+      - name: Mettre à jour l'index commun ota_index.json
         env:
           FILE: ${{ steps.img.outputs.file }}
           VERSION: ${{ steps.ver.outputs.num }}
@@ -103,28 +121,69 @@ jobs:
         run: |
           git checkout -B "$DEFAULT_BRANCH" "origin/$DEFAULT_BRANCH"
           python3 - <<'EOF'
-          import hashlib, json, os
-          f = os.environ["FILE"]
-          data = open(f, "rb").read()
-          entry = {
-              "fileName": f,
-              "fileVersion": int(os.environ["VERSION"]),
-              "fileSize": len(data),
-              "url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/{os.environ['GITHUB_REF_NAME']}/{f}",
-              "imageType": int(os.environ["OTA_IMAGE_TYPE"], 0),
-              "manufacturerCode": int(os.environ["OTA_MANUFACTURER_ID"], 0),
-              "modelId": os.environ["ZB_MODEL"],
-              "sha512": hashlib.sha512(data).hexdigest(),
-          }
-          # Une seule entrée : toujours la dernière version publiée.
-          # (pas de "force": true, sinon Z2M proposerait la MAJ en boucle)
+          import hashlib, json, os, urllib.request
+          model = os.environ["ZB_MODEL"]
+          manuf = int(os.environ["OTA_MANUFACTURER_ID"], 0)
+          itype = int(os.environ["OTA_IMAGE_TYPE"], 0)
+
+          def is_own(e):
+              return e.get("modelId") == model or (
+                  e.get("manufacturerCode") == manuf and e.get("imageType") == itype)
+
+          try:
+              current = json.load(open("ota_index.json"))
+          except Exception:
+              current = []
+
+          f = os.environ.get("FILE")
+          if f:
+              # Nouvelle version du capteur CO2 (run déclenché par un tag)
+              data = open(f, "rb").read()
+              own = [{
+                  "fileName": f,
+                  "fileVersion": int(os.environ["VERSION"]),
+                  "fileSize": len(data),
+                  "url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/{os.environ['GITHUB_REF_NAME']}/{f}",
+                  "imageType": itype,
+                  "manufacturerCode": manuf,
+                  "modelId": model,
+                  "sha512": hashlib.sha512(data).hexdigest(),
+              }]
+          else:
+              # Run quotidien / manuel : on garde l'entrée CO2 existante
+              own = [e for e in current if is_own(e)]
+
+          # Entrées des autres appareils, recopiées depuis leurs propres index.
+          # Si un index est inaccessible, on garde ses anciennes entrées.
+          extra = []
+          old_extra = [e for e in current if not is_own(e)]
+          for url in os.environ.get("EXTRA_INDEX_URLS", "").split():
+              try:
+                  with urllib.request.urlopen(url, timeout=30) as r:
+                      entries = json.load(r)
+                  extra += [e for e in entries if not is_own(e)]
+                  print(f"OK {url}: {len(entries)} entrée(s)")
+              except Exception as ex:
+                  print(f"::warning::Index inaccessible {url}: {ex} (anciennes entrées conservées)")
+                  extra += old_extra
+          # dédoublonnage par URL
+          seen, merged = set(), []
+          for e in own + extra:
+              if e.get("url") not in seen:
+                  seen.add(e.get("url")); merged.append(e)
+
+          # Pas de "force": true, sinon Z2M proposerait la MAJ en boucle
           with open("ota_index.json", "w") as out:
-              json.dump([entry], out, indent=2)
+              json.dump(merged, out, indent=2)
               out.write("\n")
-          print(json.dumps(entry, indent=2))
+          print(json.dumps(merged, indent=2))
           EOF
+          if git diff --quiet -- ota_index.json; then
+            echo "Index inchangé, rien à pousser."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add ota_index.json
-          git commit -m "OTA: index -> $GITHUB_REF_NAME"
+          git commit -m "OTA: index commun -> ${GITHUB_REF_NAME}"
           git push origin "$DEFAULT_BRANCH"
