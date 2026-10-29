@@ -1,7 +1,5 @@
 # Capteur CO2 / température / humidité Zigbee — XIAO ESP32-C6 + SCD40
 
-![capteur](images/capteur-temp.png)
-
 Firmware Arduino pour un Seeed XIAO ESP32-C6 + Sensirion SCD40, en Zigbee (end device), pour Zigbee2MQTT.
 
 - Température + humidité (endpoint 10) et CO2 (endpoint 11), envoyés toutes les 30 s
