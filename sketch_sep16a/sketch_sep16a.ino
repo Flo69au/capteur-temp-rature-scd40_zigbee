@@ -95,9 +95,11 @@
 #define OTA_IMAGE_TYPE       0x0001      // arbitraire, doit matcher l'image .zigbee généré
 
 // Offset de température (°C) -> corrige aussi l'humidité, voir explication
-// dans setup(). Valeur usine par défaut = 4.0°C. Calibré le 2026-10-29 :
-// écart mesuré de -1.5°C (capteur) vs référence -> 4.0 + (-1.5) = 2.5°C.
-#define TEMP_OFFSET_C 2.5
+// dans setup(). Valeur usine par défaut = 4.0°C.
+// Formule : nouvel_offset = T_capteur - T_reference + ancien_offset
+// Recalibré le 2026-10-29 : capteur 24.1°C vs référence 20.4°C avec un
+// offset de 2.5°C -> 24.1 - 20.4 + 2.5 = 6.2°C.
+#define TEMP_OFFSET_C 6.2
 
 uint8_t button = BOOT_PIN;
 volatile bool otaRunning = false;
