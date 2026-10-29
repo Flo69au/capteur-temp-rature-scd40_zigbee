@@ -8,5 +8,14 @@
     "manufacturerCode": 4919,
     "modelId": "XIAO-SCD40-CO2",
     "sha512": "0389601cef8c5badf459ea614734fa698347f6780dd85f935d6073cb4d9c7bbab9f88f16fecc1ab7782ad5d9f444f84294bffa06547e3079ab283a5ce8b6f1f7"
+  },
+  {
+    "fileName": "levoit_300s_v1.0.0.1.ota",
+    "fileVersion": 1,
+    "fileSize": 522478,
+    "manufacturerCode": 4891,
+    "imageType": 0,
+    "sha512": "2407ae363f603c7fcd330b6c38a8b3617df8e06b792d382de68cd75f191fc1fce55c5a638aa076e0b466138e560f4ffa8b60a0a2610858829133297e7d4f3fc6",
+    "url": "https://github.com/Flo69au/levoit-classic-300s-zigbee/releases/download/v1.0.0.1/levoit_300s_v1.0.0.1.ota"
   }
 ]
