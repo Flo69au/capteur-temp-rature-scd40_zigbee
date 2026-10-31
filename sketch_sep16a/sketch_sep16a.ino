@@ -85,11 +85,11 @@
 
 // ---- OTA ----
 // Version de CE firmware. Pour une release GitHub, elle est imposée depuis le
-// tag (v9 -> 9) via -DOTA_FW_VERSION. La valeur par défaut ci-dessous sert au
+// tag (v10 -> 10) via -DOTA_FW_VERSION. La valeur par défaut ci-dessous sert au
 // flash USB depuis l'Arduino IDE : la garder ÉGALE au dernier tag publié, pour
 // que Zigbee2MQTT ne repropose pas une mise à jour déjà installée.
 #ifndef OTA_FW_VERSION
-#define OTA_FW_VERSION       0x00000009
+#define OTA_FW_VERSION       0x0000000A
 #endif
 #define OTA_HW_VERSION       0x0101      // version matérielle (rarement à changer)
 #define OTA_MANUFACTURER_ID  0x1337      // arbitraire, doit matcher l'image .zigbee généré
@@ -97,20 +97,17 @@
 
 // Offset de température (°C) -> corrige aussi l'humidité (voir setup()).
 // Valeur usine par défaut = 4.0°C.
-// Formule : nouvel_offset = T_capteur - T_reference + offset_INSTALLÉ
-// Attention : "offset installé" = celui du firmware qui tourne vraiment sur le
-// capteur (installed_version dans Z2M), pas celui de la dernière release.
-// 2026-10-31 : le capteur tournait toujours en version 1 (offset 2.5°C, les
-// OTA v2-v8 n'étaient jamais passées). Capteur 23.5°C vs référence 20.8°C
-// -> 23.5 - 20.8 + 2.5 = 5.2°C.
-#define TEMP_OFFSET_C 5.2
+// Formule : nouvel_offset = T_capteur - T_reference + offset_installé
+// Historique : 2.5 -> 6.2 (29/10) -> 8.9 (31/10 : capteur 23.5°C vs réf 20.8°C
+// avec 6.2 -> 23.5 - 20.8 + 6.2 = 8.9). Valeur confirmée par Florian.
+#define TEMP_OFFSET_C 8.9
 
 // Correction d'humidité (en points de %RH), appliquée par le firmware avant
-// l'envoi Zigbee. Remise à 0 : les écarts d'humidité observés venaient de
-// l'échauffement du capteur (même cause que la température), que l'offset de
-// température corrige déjà. À réajuster seulement si un écart stable persiste
-// une fois la température juste : HUM_OFFSET_PCT = RH_reference - RH_affichée.
-#define HUM_OFFSET_PCT 0.0
+// l'envoi Zigbee. Le SCD40 n'a pas de calibrage RH interne.
+// Formule : HUM_OFFSET_PCT = RH_reference - RH_affichée + ancien offset
+// 1er réglage : capteur 56.6% vs référence 47.2% -> -9.4
+// Réajusté le 2026-10-29 : affiché 45.4% vs référence 47.2% -> -7.6
+#define HUM_OFFSET_PCT -7.6
 
 // Envoi forcé des 3 mesures vers Zigbee2MQTT, quoi qu'il arrive (même si la
 // valeur n'a pas changé). Le reporting automatique de la pile Zigbee ne
