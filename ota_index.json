@@ -1,13 +1,13 @@
 [
   {
-    "fileName": "1337-0001-00000009-ota-file.zigbee",
-    "fileVersion": 9,
-    "fileSize": 630542,
-    "url": "https://github.com/Flo69au/capteur-temp-rature-scd40_zigbee/releases/download/v9/1337-0001-00000009-ota-file.zigbee",
+    "fileName": "1337-0001-0000000A-ota-file.zigbee",
+    "fileVersion": 10,
+    "fileSize": 630558,
+    "url": "https://github.com/Flo69au/capteur-temp-rature-scd40_zigbee/releases/download/v10/1337-0001-0000000A-ota-file.zigbee",
     "imageType": 1,
     "manufacturerCode": 4919,
     "modelId": "XIAO-SCD40-CO2",
-    "sha512": "df1498236db06a828d6ed1103762e10db2fa38b48fd9af6514f5aae0645b2e86299c7f2efe8fe7ca099e68c6fc8d3f537071a1100904f997034c68fca488faaf"
+    "sha512": "3e45bd5f914f1706ba498140584312c0c2a4c3d43e55c07d42e0375ecc6386e7bd3e9074e6af7f4a778f41e6693e026fe84ec4737cff7de6bfcaeebc0e23ee8e"
   },
   {
     "fileName": "levoit_300s_v1.0.0.1.ota",
