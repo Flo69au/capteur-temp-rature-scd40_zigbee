@@ -99,7 +99,9 @@
 // Formule : nouvel_offset = T_capteur - T_reference + ancien_offset
 // Recalibré le 2026-10-29 : capteur 24.1°C vs référence 20.4°C avec un
 // offset de 2.5°C -> 24.1 - 20.4 + 2.5 = 6.2°C.
-#define TEMP_OFFSET_C 6.2
+// Recalibré le 2026-10-31 (v6 installée) : capteur 23.5°C vs référence 20.8°C
+// -> 23.5 - 20.8 + 6.2 = 8.9°C.
+#define TEMP_OFFSET_C 8.9
 
 // Correction d'humidité (en points de %RH), appliquée par le firmware avant
 // l'envoi Zigbee, une fois la température correcte. Le SCD40 n'a pas de
