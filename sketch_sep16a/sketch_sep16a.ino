@@ -85,31 +85,32 @@
 
 // ---- OTA ----
 // Version de CE firmware. Pour une release GitHub, elle est imposée depuis le
-// tag (v2 -> 2) via -DOTA_FW_VERSION : pas besoin d'y toucher ici. Cette valeur
-// par défaut ne sert que pour un flash USB local depuis l'Arduino IDE.
+// tag (v9 -> 9) via -DOTA_FW_VERSION. La valeur par défaut ci-dessous sert au
+// flash USB depuis l'Arduino IDE : la garder ÉGALE au dernier tag publié, pour
+// que Zigbee2MQTT ne repropose pas une mise à jour déjà installée.
 #ifndef OTA_FW_VERSION
-#define OTA_FW_VERSION       0x00000001
+#define OTA_FW_VERSION       0x00000009
 #endif
 #define OTA_HW_VERSION       0x0101      // version matérielle (rarement à changer)
 #define OTA_MANUFACTURER_ID  0x1337      // arbitraire, doit matcher l'image .zigbee généré
 #define OTA_IMAGE_TYPE       0x0001      // arbitraire, doit matcher l'image .zigbee généré
 
-// Offset de température (°C) -> corrige aussi l'humidité, voir explication
-// dans setup(). Valeur usine par défaut = 4.0°C.
-// Formule : nouvel_offset = T_capteur - T_reference + ancien_offset
-// Recalibré le 2026-10-29 : capteur 24.1°C vs référence 20.4°C avec un
-// offset de 2.5°C -> 24.1 - 20.4 + 2.5 = 6.2°C.
-// Recalibré le 2026-10-31 (v6 installée) : capteur 23.5°C vs référence 20.8°C
-// -> 23.5 - 20.8 + 6.2 = 8.9°C.
-#define TEMP_OFFSET_C 8.9
+// Offset de température (°C) -> corrige aussi l'humidité (voir setup()).
+// Valeur usine par défaut = 4.0°C.
+// Formule : nouvel_offset = T_capteur - T_reference + offset_INSTALLÉ
+// Attention : "offset installé" = celui du firmware qui tourne vraiment sur le
+// capteur (installed_version dans Z2M), pas celui de la dernière release.
+// 2026-10-31 : le capteur tournait toujours en version 1 (offset 2.5°C, les
+// OTA v2-v8 n'étaient jamais passées). Capteur 23.5°C vs référence 20.8°C
+// -> 23.5 - 20.8 + 2.5 = 5.2°C.
+#define TEMP_OFFSET_C 5.2
 
 // Correction d'humidité (en points de %RH), appliquée par le firmware avant
-// l'envoi Zigbee, une fois la température correcte. Le SCD40 n'a pas de
-// calibrage RH interne, c'est donc une simple correction logicielle.
-// Formule : HUM_OFFSET_PCT = RH_reference - RH_capteur (+ ancien offset)
-// 1er réglage : capteur 56.6% vs référence 47.2% -> -9.4
-// Réajusté le 2026-10-29 : affiché 45.4% vs référence 47.2% -> 47.2 - 45.4 + (-9.4) = -7.6
-#define HUM_OFFSET_PCT -7.6
+// l'envoi Zigbee. Remise à 0 : les écarts d'humidité observés venaient de
+// l'échauffement du capteur (même cause que la température), que l'offset de
+// température corrige déjà. À réajuster seulement si un écart stable persiste
+// une fois la température juste : HUM_OFFSET_PCT = RH_reference - RH_affichée.
+#define HUM_OFFSET_PCT 0.0
 
 // Envoi forcé des 3 mesures vers Zigbee2MQTT, quoi qu'il arrive (même si la
 // valeur n'a pas changé). Le reporting automatique de la pile Zigbee ne
