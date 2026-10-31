@@ -118,6 +118,14 @@
 
 uint8_t button = BOOT_PIN;
 volatile bool otaRunning = false;
+volatile bool otaEnded = false;          // OTA terminée sans redémarrage auto (= échec)
+volatile unsigned long otaStartMs = 0;
+
+// Garde-fou OTA : la lib Zigbee ne prévient pas le sketch quand une mise à jour
+// est annulée (ABORT), et garde alors un état interne incohérent qui fait
+// échouer les tentatives suivantes. Si l'OTA dure plus que ça, ou se termine
+// sans redémarrer, le firmware redémarre pour repartir sur un état propre.
+#define OTA_MAX_DURATION_MS (2UL * 60UL * 60UL * 1000UL)  // 2 h
 
 // Petits helpers pour la LED active LOW (LOW = allumée sur ce board)
 inline void ledOn() {
@@ -128,8 +136,14 @@ inline void ledOff() {
 }
 
 void onOTAStateChange(bool active) {
+  if (active) {
+    otaStartMs = millis();
+    otaEnded = false;
+  } else if (otaRunning) {
+    otaEnded = true;  // en cas de succès la lib redémarre d'elle-même juste après
+  }
   otaRunning = active;
-  Serial.println(active ? "OTA: mise à jour démarrée" : "OTA: terminé (redémarrage)");
+  Serial.println(active ? "OTA: mise à jour démarrée" : "OTA: terminée");
 }
 
 SensirionI2cScd4x scd40;
@@ -250,7 +264,17 @@ void loop() {
 
   // Pendant une mise à jour OTA : LED clignote vite, boutons de reset désactivés
   // (couper l'alimentation ou remettre à zéro le réseau en plein flash OTA = brique)
+  if (otaEnded) {
+    Serial.println("OTA interrompue -> redémarrage pour repartir sur un état propre");
+    delay(2000);
+    ESP.restart();
+  }
   if (otaRunning) {
+    if (millis() - otaStartMs > OTA_MAX_DURATION_MS) {
+      Serial.println("OTA bloquée depuis trop longtemps -> redémarrage");
+      delay(500);
+      ESP.restart();
+    }
     digitalWrite(STATUS_LED, (millis() / 100) % 2);
     delay(10);
     return;
