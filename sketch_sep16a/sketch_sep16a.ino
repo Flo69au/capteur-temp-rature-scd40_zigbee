@@ -85,11 +85,11 @@
 
 // ---- OTA ----
 // Version de CE firmware. Pour une release GitHub, elle est imposée depuis le
-// tag (v10 -> 10) via -DOTA_FW_VERSION. La valeur par défaut ci-dessous sert au
+// tag (v11 -> 11) via -DOTA_FW_VERSION. La valeur par défaut ci-dessous sert au
 // flash USB depuis l'Arduino IDE : la garder ÉGALE au dernier tag publié, pour
 // que Zigbee2MQTT ne repropose pas une mise à jour déjà installée.
 #ifndef OTA_FW_VERSION
-#define OTA_FW_VERSION       0x0000000A
+#define OTA_FW_VERSION       0x0000000B
 #endif
 #define OTA_HW_VERSION       0x0101      // version matérielle (rarement à changer)
 #define OTA_MANUFACTURER_ID  0x1337      // arbitraire, doit matcher l'image .zigbee généré
@@ -107,7 +107,9 @@
 // Formule : HUM_OFFSET_PCT = RH_reference - RH_affichée + ancien offset
 // 1er réglage : capteur 56.6% vs référence 47.2% -> -9.4
 // Réajusté le 2026-10-29 : affiché 45.4% vs référence 47.2% -> -7.6
-#define HUM_OFFSET_PCT -7.6
+// Réajusté le 2026-11-01 (v10, offset T 8.9) : affiché 49.7% vs référence 43.6%
+// -> 43.6 - 49.7 + (-7.6) = -13.7
+#define HUM_OFFSET_PCT -13.7
 
 // Envoi forcé des 3 mesures vers Zigbee2MQTT, quoi qu'il arrive (même si la
 // valeur n'a pas changé). Le reporting automatique de la pile Zigbee ne
