@@ -35,15 +35,22 @@ Firmware Arduino pour un Seeed XIAO ESP32-C6 + Sensirion SCD40, en Zigbee (end d
      enable_external_js: true
    ota:
      zigbee_ota_override_index_location: https://raw.githubusercontent.com/Flo69au/capteur-temp-rature-scd40_zigbee/main/ota_index.json
+     disable_automatic_update_check: false   # Z2M détecte seul les nouvelles versions
+     update_check_interval: 1440             # au plus une vérification par 24 h
+     default_maximum_data_size: 50           # ne PAS mettre 100 : l'OTA échoue dès le début
    ```
+   `ota_index.json` est un index commun : il contient aussi le purificateur Levoit.
 3. Redémarrer Zigbee2MQTT
 
 ## Publier une mise à jour OTA
 
 1. Commit + push des modifications du sketch
-2. Créer et pousser un tag **`v<entier>`** plus grand que le précédent (`v2`, `v3`, …) — le capteur flashé en USB est en version 1
+2. Créer un tag **`v<entier>`** plus grand que le précédent (`v12`, `v13`, …), en le poussant ou depuis
+   GitHub : *Releases → Draft a new release → nouveau tag → Publish release*. Penser à mettre la même
+   valeur dans `OTA_FW_VERSION` (valeur par défaut du sketch, utilisée pour un flash USB)
 3. Le workflow `.github/workflows/ota-release.yml` compile avec `OTA_FW_VERSION = <entier>`,
    crée l'image `.zigbee`, la publie dans une Release et met à jour `ota_index.json`
-4. Dans Zigbee2MQTT : capteur → OTA → *Check for updates* → *Update*
+4. Dans Zigbee2MQTT, la nouvelle version apparaît d'elle-même dans les 24 h (ou tout de suite avec
+   *Check for updates*) ; l'installation se lance avec *Update* (~1 h, ne pas redémarrer Z2M pendant)
 
 Pas de `"force": true` dans l'index : la mise à jour serait proposée en boucle.
