@@ -8,15 +8,11 @@
 #   3. publie le .zigbee dans une Release GitHub
 #   4. met à jour ota_index.json sur la branche principale
 #
-# ota_index.json est un index COMMUN : il contient l'entrée du capteur CO2
-# + les entrées recopiées depuis les index listés dans EXTRA_INDEX_URLS
-# (ex: purificateur Levoit). Il est aussi rafraîchi chaque jour et via le
-# bouton "Run workflow" (onglet Actions), pour suivre les releases des
-# autres appareils sans toucher au capteur CO2.
-#
-# Zigbee2MQTT lit ota_index.json via (configuration.yaml) :
+# ota_index.json ne contient que le capteur CO2. L'index commun lu par
+# Zigbee2MQTT (CO2 + Levoit + sonde radiateur) est fusionné toutes les heures
+# par le dépôt Flo69au/zigbee-ota (configuration.yaml) :
 #   ota:
-#     zigbee_ota_override_index_location: https://raw.githubusercontent.com/Flo69au/capteur-temp-rature-scd40_zigbee/main/ota_index.json
+#     zigbee_ota_override_index_location: https://raw.githubusercontent.com/Flo69au/zigbee-ota/main/ota_index.json
 #
 # Le repo doit être PUBLIC (Zigbee2MQTT ne sait pas s'authentifier sur GitHub).
 
@@ -27,8 +23,6 @@ on:
     tags:
       - 'v*'
       - 'V*'
-  schedule:
-    - cron: '17 4 * * *'   # tous les jours vers 4h17 UTC : resynchronise l'index commun
   workflow_dispatch:        # bouton "Run workflow" dans l'onglet Actions
 
 permissions:
@@ -43,9 +37,8 @@ env:
   OTA_MANUFACTURER_ID: "0x1337"
   OTA_IMAGE_TYPE: "0x0001"
   ZB_MODEL: XIAO-SCD40-CO2
-  # Index OTA d'autres appareils à intégrer dans l'index commun (séparés par des espaces)
-  EXTRA_INDEX_URLS: >-
-    https://raw.githubusercontent.com/Flo69au/levoit-classic-300s-zigbee/main/ota_index.json
+  # Index d'autres appareils à recopier ici : vide, la fusion est faite par Flo69au/zigbee-ota
+  EXTRA_INDEX_URLS: ""
 
 jobs:
   release:
