@@ -45,10 +45,11 @@ Firmware Arduino pour un Seeed XIAO ESP32-C6 + Sensirion SCD40, en Zigbee (end d
 ## Publier une mise à jour OTA
 
 1. Commit + push des modifications du sketch
-2. Créer un tag **`v<entier>`** plus grand que le précédent (`v12`, `v13`, …), en le poussant ou depuis
-   GitHub : *Releases → Draft a new release → nouveau tag → Publish release*. Penser à mettre la même
-   valeur dans `OTA_FW_VERSION` (valeur par défaut du sketch, utilisée pour un flash USB)
-3. Le workflow `.github/workflows/ota-release.yml` compile avec `OTA_FW_VERSION = <entier>`,
+2. Créer un tag **`v<majeur>.<mineur>`** plus grand que le précédent (`v1.0`, `v1.1`, `v1.2`…, ou
+   `v1.2.1` pour un correctif), en le poussant ou depuis GitHub : *Releases → Draft a new release →
+   nouveau tag → Publish release*. Penser à mettre la même valeur dans `OTA_FW_VERSION`
+   (valeur par défaut du sketch pour un flash USB, format `0xMMmmPP00` : v1.1 → `0x01010000`)
+3. Le workflow `.github/workflows/ota-release.yml` compile avec `OTA_FW_VERSION` = version du tag,
    crée l'image `.zigbee`, la publie dans une Release et met à jour `ota_index.json`
 4. Dans Zigbee2MQTT, la nouvelle version apparaît d'elle-même dans les 24 h (ou tout de suite avec
    *Check for updates*) ; l'installation se lance avec *Update* (~1 h, ne pas redémarrer Z2M pendant)
