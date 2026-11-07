@@ -40,9 +40,9 @@
  *   Le device embarque un client OTA Zigbee natif.
  *
  *   Méthode recommandée : GitHub (automatique)
- *     Pousser un tag "v2", "v3"... sur le repo GitHub : le workflow
+ *     Publier un tag "v1.0", "v1.1"... sur le repo GitHub : le workflow
  *     .github/workflows/ota-release.yml compile ce sketch avec
- *     OTA_FW_VERSION = numéro du tag, fabrique l'image .zigbee, la publie
+ *     OTA_FW_VERSION = version du tag, fabrique l'image .zigbee, la publie
  *     dans une Release et met à jour ota_index.json, que Zigbee2MQTT lit via
  *     ota.zigbee_ota_override_index_location (URL raw.githubusercontent.com).
  *
@@ -84,12 +84,14 @@
 #define ZB_MODEL        "XIAO-SCD40-CO2"
 
 // ---- OTA ----
-// Version de CE firmware. Pour une release GitHub, elle est imposée depuis le
-// tag (v11 -> 11) via -DOTA_FW_VERSION. La valeur par défaut ci-dessous sert au
-// flash USB depuis l'Arduino IDE : la garder ÉGALE au dernier tag publié, pour
-// que Zigbee2MQTT ne repropose pas une mise à jour déjà installée.
+// Version de CE firmware, format 0xMMmmPP00 (majeur.mineur.correctif) :
+//   v1.0 -> 0x01000000, v1.1 -> 0x01010000, v1.2.3 -> 0x01020300
+// Pour une release GitHub, elle est imposée depuis le tag (v1.1, v1.2...) via
+// -DOTA_FW_VERSION. La valeur par défaut ci-dessous sert au flash USB depuis
+// l'Arduino IDE : la garder ÉGALE au dernier tag publié, pour que Zigbee2MQTT
+// ne repropose pas une mise à jour déjà installée.
 #ifndef OTA_FW_VERSION
-#define OTA_FW_VERSION       0x0000000B
+#define OTA_FW_VERSION       0x01000000  // v1.0
 #endif
 #define OTA_HW_VERSION       0x0101      // version matérielle (rarement à changer)
 #define OTA_MANUFACTURER_ID  0x1337      // arbitraire, doit matcher l'image .zigbee généré
@@ -155,7 +157,11 @@ static char errorMessage[64];
 void setup() {
   Serial.begin(115200);
   delay(2000);  // laisse le temps d'ouvrir le moniteur série en debug
-  Serial.printf("Firmware version %lu\r\n", (unsigned long)OTA_FW_VERSION);
+  Serial.printf("Firmware v%lu.%lu.%lu (0x%08lX)\r\n",
+                (unsigned long)((OTA_FW_VERSION >> 24) & 0xFF),
+                (unsigned long)((OTA_FW_VERSION >> 16) & 0xFF),
+                (unsigned long)((OTA_FW_VERSION >> 8) & 0xFF),
+                (unsigned long)OTA_FW_VERSION);
 
   pinMode(button, INPUT_PULLUP);
   pinMode(PAIR_BUTTON, INPUT_PULLUP);
