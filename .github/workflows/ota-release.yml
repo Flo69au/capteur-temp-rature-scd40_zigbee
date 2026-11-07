@@ -1,9 +1,9 @@
 # Publie automatiquement une mise à jour OTA Zigbee du capteur CO2
-# à chaque tag "v<nombre>" poussé sur GitHub (ex: v2, v3, v4...), ou créé depuis
-# l'interface web : Releases -> Draft a new release -> tag "v3" -> Publish.
+# à chaque tag "v<majeur>.<mineur>" poussé sur GitHub (ex: v1.0, v1.1, v1.2.1), ou créé
+# depuis l'interface web : Releases -> Draft a new release -> tag "v1.1" -> Publish.
 #
 # Ce que fait ce workflow :
-#   1. compile sketch_sep16a avec OTA_FW_VERSION = numéro du tag
+#   1. compile sketch_sep16a avec OTA_FW_VERSION = version du tag (0xMMmmPP00)
 #   2. emballe le .bin en image OTA Zigbee (.zigbee) avec l'outil Espressif
 #   3. publie le .zigbee dans une Release GitHub
 #   4. met à jour ota_index.json sur la branche principale
@@ -26,6 +26,7 @@ on:
   push:
     tags:
       - 'v*'
+      - 'V*'
   schedule:
     - cron: '17 4 * * *'   # tous les jours vers 4h17 UTC : resynchronise l'index commun
   workflow_dispatch:        # bouton "Run workflow" dans l'onglet Actions
@@ -56,28 +57,37 @@ jobs:
 
       - name: Version depuis le tag
         id: ver
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
-          NUM="${GITHUB_REF_NAME#v}"
-          if ! [[ "$NUM" =~ ^[0-9]+$ ]]; then
-            echo "::error::Le tag doit être de la forme v<entier> (ex: v2), reçu: $GITHUB_REF_NAME"
+          # Tags acceptés : v1.0, v1.1, v2.3, ou avec correctif v1.2.1 (v ou V)
+          # Version OTA Zigbee = 0xMMmmPP00 (majeur, mineur, correctif), ex: v1.1 -> 0x01010000
+          T="${GITHUB_REF_NAME#[vV]}"
+          if ! [[ "$T" =~ ^([0-9]+)\.([0-9]+)(\.([0-9]+))?$ ]]; then
+            echo "::error::Le tag doit être de la forme v1.0, v1.1 ou v1.2.3 ; reçu : $GITHUB_REF_NAME"
             exit 1
           fi
+          MA=${BASH_REMATCH[1]}; MI=${BASH_REMATCH[2]}; PA=${BASH_REMATCH[4]:-0}
+          if (( MA > 255 || MI > 255 || PA > 255 )); then
+            echo "::error::Chaque numéro doit être <= 255"; exit 1
+          fi
+          NUM=$(( (MA << 24) | (MI << 16) | (PA << 8) ))
           echo "num=$NUM" >> "$GITHUB_OUTPUT"
           echo "hex=$(printf '0x%08X' "$NUM")" >> "$GITHUB_OUTPUT"
+          echo "label=$MA.$MI.$PA" >> "$GITHUB_OUTPUT"
+          echo "Version $MA.$MI.$PA -> $(printf '0x%08X' "$NUM")"
 
       - uses: arduino/setup-arduino-cli@v2.0.0
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/')
 
       - name: Installer le core ESP32 et la librairie SCD4x
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           arduino-cli core update-index --additional-urls "$ESP32_INDEX_URL"
           arduino-cli core install "esp32:esp32@${ESP32_CORE_VERSION}" --additional-urls "$ESP32_INDEX_URL"
           arduino-cli lib install "Sensirion I2C SCD4x"
 
       - name: Compiler le firmware
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           arduino-cli compile --fqbn "$FQBN" \
             --build-property "build.defines=-DOTA_FW_VERSION=${{ steps.ver.outputs.hex }}" \
@@ -86,7 +96,7 @@ jobs:
 
       - name: Construire l'image OTA Zigbee
         id: img
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           curl -sSfL -o image_builder_tool.py \
             https://raw.githubusercontent.com/espressif/esp-zigbee-sdk/main/tools/image_builder_tool/image_builder_tool.py
@@ -99,7 +109,7 @@ jobs:
           ls -la "$FILE"
 
       - name: Publier la Release GitHub
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -110,7 +120,7 @@ jobs:
           else
             gh release create "$GITHUB_REF_NAME" "${{ steps.img.outputs.file }}" \
               --title "Firmware $GITHUB_REF_NAME" \
-              --notes "Image OTA Zigbee version ${{ steps.ver.outputs.num }} (${{ steps.ver.outputs.hex }})."
+              --notes "Image OTA Zigbee version ${{ steps.ver.outputs.label }} (${{ steps.ver.outputs.hex }})."
           fi
 
       - name: Mettre à jour l'index commun ota_index.json
