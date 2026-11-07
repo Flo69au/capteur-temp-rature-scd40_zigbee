@@ -34,12 +34,13 @@ Firmware Arduino pour un Seeed XIAO ESP32-C6 + Sensirion SCD40, en Zigbee (end d
    advanced:
      enable_external_js: true
    ota:
-     zigbee_ota_override_index_location: https://raw.githubusercontent.com/Flo69au/capteur-temp-rature-scd40_zigbee/main/ota_index.json
+     zigbee_ota_override_index_location: https://raw.githubusercontent.com/Flo69au/zigbee-ota/main/ota_index.json
      disable_automatic_update_check: false   # Z2M détecte seul les nouvelles versions
      update_check_interval: 1440             # au plus une vérification par 24 h
      default_maximum_data_size: 50           # ne PAS mettre 100 : l'OTA échoue dès le début
    ```
-   `ota_index.json` est un index commun : il contient aussi le purificateur Levoit.
+   L'index commun [zigbee-ota](https://github.com/Flo69au/zigbee-ota) fusionne toutes les heures le
+   `ota_index.json` de ce dépôt avec ceux du Levoit et de la sonde radiateur.
 3. Redémarrer Zigbee2MQTT
 
 ## Publier une mise à jour OTA
