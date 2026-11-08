@@ -9,10 +9,15 @@
  *
  * Réglages Outils (Arduino IDE) AVANT de flasher :
  *   - Carte                                   : XIAO_ESP32C6
- *   - Zigbee mode                             : Zigbee ED (end device)
- *   - Partition Scheme                        : Zigbee 4MB with spiffs
- *   - Erase All Flash Before Sketch Upload    : Enabled (au moins pour le 1er flash,
- *                                                ou après un factory reset du coordinateur)
+ *   - Zigbee mode                             : Zigbee ZCZR (coordinator/router)
+ *   - Partition Scheme                        : Zigbee ZCZR 4MB with spiffs
+ *   - Erase All Flash Before Sketch Upload    : Enabled pour le 1er flash en mode routeur
+ *                                                (puis réappairer), Disabled ensuite
+ *
+ * Mode routeur : le capteur est alimenté sur secteur, il relaie donc aussi les
+ * messages des autres appareils Zigbee (maillage plus solide). Le passage
+ * end device -> routeur change la table des partitions : il se fait UNE fois
+ * en USB avec effacement complet, jamais par OTA.
  *
  * Câblage SCD40 -> XIAO ESP32-C6 :
  *   VDD -> 3V3
@@ -63,8 +68,8 @@
 
 #include <Arduino.h>
 
-#ifndef ZIGBEE_MODE_ED
-#error "Sélectionne 'Zigbee ED (end device)' dans Outils -> Zigbee mode"
+#ifndef ZIGBEE_MODE_ZCZR
+#error "Sélectionne 'Zigbee ZCZR (coordinator/router)' dans Outils -> Zigbee mode (et Partition Scheme 'Zigbee ZCZR 4MB with spiffs')"
 #endif
 
 #include "Zigbee.h"
@@ -91,7 +96,7 @@
 // l'Arduino IDE : la garder ÉGALE au dernier tag publié, pour que Zigbee2MQTT
 // ne repropose pas une mise à jour déjà installée.
 #ifndef OTA_FW_VERSION
-#define OTA_FW_VERSION       0x01000000  // v1.0
+#define OTA_FW_VERSION       0x01010000  // v1.1 (1re version routeur)
 #endif
 #define OTA_HW_VERSION       0x0101      // version matérielle (rarement à changer)
 #define OTA_MANUFACTURER_ID  0x1337      // arbitraire, doit matcher l'image .zigbee généré
@@ -239,7 +244,7 @@ void setup() {
   Zigbee.addEndpoint(&zbCO2);
 
   Serial.println("Démarrage Zigbee...");
-  if (!Zigbee.begin()) {
+  if (!Zigbee.begin(ZIGBEE_ROUTER)) {  // routeur Zigbee (alimentation secteur)
     Serial.println("Échec du démarrage Zigbee, redémarrage...");
     ESP.restart();
   }
