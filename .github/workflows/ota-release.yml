@@ -30,7 +30,8 @@ permissions:
 
 env:
   SKETCH_DIR: sketch_sep16a
-  FQBN: esp32:esp32:XIAO_ESP32C6:PartitionScheme=zigbee,ZigbeeMode=ed
+  # Mode routeur Zigbee (ZCZR) : le capteur est alimenté sur secteur
+  FQBN: esp32:esp32:XIAO_ESP32C6:PartitionScheme=zigbee_zczr,ZigbeeMode=zczr
   ESP32_CORE_VERSION: "3.3.12"
   ESP32_INDEX_URL: https://espressif.github.io/arduino-esp32/package_esp32_index.json
   # Doivent correspondre au sketch (OTA_MANUFACTURER_ID / OTA_IMAGE_TYPE / ZB_MODEL)
