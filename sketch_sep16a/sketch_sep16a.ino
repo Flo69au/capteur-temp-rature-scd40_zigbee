@@ -35,7 +35,9 @@
  * LED de statut : la LED orange intégrée au XIAO ESP32-C6 (GPIO15,
  *   active LOW -> LOW = allumée) clignote tant que le device n'est pas
  *   connecté au réseau Zigbee (donc pendant l'appairage) et s'éteint une
- *   fois connecté. Si elle s'allume à l'envers chez toi, inverse simplement
+ *   fois connecté. Ensuite elle fait un flash bref (0,15 s) à chaque envoi
+ *   de données à Zigbee2MQTT (toutes les 30 s), et reste allumée 1 s si
+ *   l'envoi échoue. Si elle s'allume à l'envers chez toi, inverse simplement
  *   ledOn()/ledOff() plus bas.
  *
  * Côté Zigbee2MQTT : ce firmware n'étant pas un device "connu", il faut lui
@@ -96,7 +98,7 @@
 // l'Arduino IDE : la garder ÉGALE au dernier tag publié, pour que Zigbee2MQTT
 // ne repropose pas une mise à jour déjà installée.
 #ifndef OTA_FW_VERSION
-#define OTA_FW_VERSION       0x01010000  // v1.1 (1re version routeur)
+#define OTA_FW_VERSION       0x01020000  // v1.2 (routeur, flash LED à chaque envoi)
 #endif
 #define OTA_HW_VERSION       0x0101      // version matérielle (rarement à changer)
 #define OTA_MANUFACTURER_ID  0x1337      // arbitraire, doit matcher l'image .zigbee généré
@@ -140,6 +142,15 @@ inline void ledOn() {
 }
 inline void ledOff() {
   digitalWrite(STATUS_LED, HIGH);
+}
+
+// Flash à chaque envoi de données (non bloquant : éteint dans loop())
+#define LED_FLASH_MS      150   // envoi réussi
+#define LED_FLASH_FAIL_MS 1000  // échec d'envoi : allumée plus longtemps
+static unsigned long ledFlashUntil = 0;
+inline void ledFlash(bool ok) {
+  ledOn();
+  ledFlashUntil = millis() + (ok ? LED_FLASH_MS : LED_FLASH_FAIL_MS);
 }
 
 void onOTAStateChange(bool active) {
@@ -320,6 +331,12 @@ void loop() {
     }
   }
 
+  // Fin du flash LED d'envoi
+  if (ledFlashUntil && (long)(millis() - ledFlashUntil) >= 0) {
+    ledFlashUntil = 0;
+    ledOff();
+  }
+
   // Le SCD40 produit une nouvelle mesure toutes les ~5s en mode périodique
   if (millis() - lastRead > 1000) {
     lastRead = millis();
@@ -350,5 +367,6 @@ void loop() {
     bool ok = zbTempHum.report();   // température + humidité
     ok = zbCO2.report() && ok;      // CO2
     Serial.println(ok ? "Rapport Zigbee envoyé" : "Échec d'envoi du rapport Zigbee");
+    ledFlash(ok);  // flash bref (ou 1 s si échec)
   }
 }
