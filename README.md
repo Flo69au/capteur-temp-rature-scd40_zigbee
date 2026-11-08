@@ -4,7 +4,8 @@ Firmware Arduino pour un Seeed XIAO ESP32-C6 + Sensirion SCD40, en **routeur Zig
 
 - Température + humidité (endpoint 10) et CO2 (endpoint 11), envoyés toutes les 30 s
 - Calibrage automatique du CO2 (ASC, 400 ppm) et offset de température réglable (`TEMP_OFFSET_C`)
-- Bouton d'appairage (D1 → GND), LED de statut (GPIO15)
+- Bouton d'appairage (D1 → GND), LED de statut (GPIO15) : clignote pendant l'appairage, flash bref à
+  chaque envoi de données (toutes les 30 s), allumée 1 s si l'envoi échoue
 - Mise à jour OTA par le réseau Zigbee, publiée automatiquement par GitHub Actions
 
 ## Câblage
