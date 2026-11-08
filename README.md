@@ -1,6 +1,6 @@
 # Capteur CO2 / température / humidité Zigbee — XIAO ESP32-C6 + SCD40
 
-Firmware Arduino pour un Seeed XIAO ESP32-C6 + Sensirion SCD40, en Zigbee (end device), pour Zigbee2MQTT.
+Firmware Arduino pour un Seeed XIAO ESP32-C6 + Sensirion SCD40, en **routeur Zigbee** (alimentation secteur), pour Zigbee2MQTT.
 
 - Température + humidité (endpoint 10) et CO2 (endpoint 11), envoyés toutes les 30 s
 - Calibrage automatique du CO2 (ASC, 400 ppm) et offset de température réglable (`TEMP_OFFSET_C`)
@@ -21,8 +21,10 @@ Firmware Arduino pour un Seeed XIAO ESP32-C6 + Sensirion SCD40, en Zigbee (end d
 
 - Core **esp32 by Espressif** ≥ 3.3, librairie **Sensirion I2C SCD4x**
 - Outils → Carte : `XIAO_ESP32C6`
-- Outils → Zigbee mode : `Zigbee ED (end device)`
-- Outils → Partition Scheme : `Zigbee 4MB with spiffs`
+- Outils → Zigbee mode : `Zigbee ZCZR (coordinator/router)`
+- Outils → Partition Scheme : `Zigbee ZCZR 4MB with spiffs`
+- Passage d'un firmware *end device* au routeur : **une fois en USB** avec *Erase All Flash = Enabled*,
+  puis réappairer dans Z2M (la table des partitions change, ce passage ne peut pas se faire en OTA)
 
 `i2c_scanner/` : petit sketch de diagnostic (le SCD40 doit répondre en `0x62`).
 
