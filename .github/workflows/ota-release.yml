@@ -76,9 +76,19 @@ jobs:
       - name: Installer le core ESP32 et la librairie SCD4x
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          arduino-cli core update-index --additional-urls "$ESP32_INDEX_URL"
-          arduino-cli core install "esp32:esp32@${ESP32_CORE_VERSION}" --additional-urls "$ESP32_INDEX_URL"
-          arduino-cli lib install "Sensirion I2C SCD4x"
+          # Les serveurs de téléchargement renvoient parfois une erreur 504 passagère :
+          # jusqu'à 5 tentatives, espacées de 30 s, 60 s, 120 s puis 240 s
+          retry() {
+            local n=1 delay=30
+            until "$@"; do
+              if (( n >= 5 )); then echo "::error::Échec après $n tentatives : $*"; return 1; fi
+              echo "::warning::Tentative $n échouée, nouvel essai dans ${delay} s"
+              sleep "$delay"; n=$((n+1)); delay=$((delay*2))
+            done
+          }
+          retry arduino-cli core update-index --additional-urls "$ESP32_INDEX_URL"
+          retry arduino-cli core install "esp32:esp32@${ESP32_CORE_VERSION}" --additional-urls "$ESP32_INDEX_URL"
+          retry arduino-cli lib install "Sensirion I2C SCD4x"
 
       - name: Compiler le firmware
         if: startsWith(github.ref, 'refs/tags/')
